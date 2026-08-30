@@ -311,8 +311,8 @@ function renderTooltip(el, d, inn, teamColor, event) {
   const bowler    = inn.bowlers[d.bowler];
 
   const batterSR  = d.batterBalls > 0 ? (d.batterRuns / d.batterBalls * 100).toFixed(1) : '–';
-  const bowlerEco = bowler && bowler.balls > 0
-    ? (bowler.runsConceded / bowler.balls * 6).toFixed(2)
+  const bowlerEco = d.bowlerBalls > 0
+    ? (d.bowlerRunsNow / d.bowlerBalls * 6).toFixed(2)
     : '–';
   const teamRR    = d.x > 0 ? (d.y / d.x).toFixed(2) : '–';
 
@@ -328,7 +328,7 @@ function renderTooltip(el, d, inn, teamColor, event) {
     </div>
     ${nonStrike ? `<div class="tooltip-row">
       <span class="tooltip-label"><span class="tt-dot" style="background:${noc}"></span>${shortName(d.nonStriker)}</span>
-      <span class="tooltip-val">${nonStrike.personalRuns} (${nonStrike.balls}b)</span>
+      <span class="tooltip-val">${d.nonStrikerRuns} (${d.nonStrikerBalls}b)</span>
     </div>` : ''}
     <hr class="tooltip-sep">
     <div class="tooltip-row">

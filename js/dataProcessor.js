@@ -142,12 +142,14 @@ function processInnings(inn, idx) {
         extraRuns: ball.runs.extras,
         isLegal:   !isIllegal,
         isWicket,
-        // running stats for tooltip
-        batterRuns:       batterMap[batter].personalRuns,
-        batterBalls:      batterMap[batter].balls,
-        bowlerRunsNow:    bowlerMap[bowler].runsConceded,
-        bowlerBalls:      bowlerMap[bowler].balls,
-        bowlerWicketsNow: bowlerMap[bowler].wickets,
+        // running stats for tooltip (snapshot at this delivery)
+        batterRuns:          batterMap[batter].personalRuns,
+        batterBalls:         batterMap[batter].balls,
+        nonStrikerRuns:      batterMap[nonStriker].personalRuns,
+        nonStrikerBalls:     batterMap[nonStriker].balls,
+        bowlerRunsNow:       bowlerMap[bowler].runsConceded,
+        bowlerBalls:         bowlerMap[bowler].balls,
+        bowlerWicketsNow:    bowlerMap[bowler].wickets,
       });
     }
   }

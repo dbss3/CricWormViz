@@ -104,6 +104,7 @@ body {
 .innings-svg {
   display: block;
   background: var(--surface-1);
+  overflow: hidden;
 }
 
 /* axes */
