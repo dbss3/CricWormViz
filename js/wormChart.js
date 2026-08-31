@@ -97,6 +97,7 @@ function renderPanel(el, inn, teamColor, panelIdx) {
   drawWicketConnectors(root, inn, xScale, bYScale, wYScale);
   drawAxes(root, inn, xScale, wYScale, bYScale);
   setupHover(svg, root, inn, xScale, wYScale, bYScale, teamColor, panelIdx);
+  setupZoom(svg);
 }
 
 /* ── bowler panel ─────────────────────────────────────────────────── */
@@ -332,6 +333,7 @@ function setupHover(svg, root, inn, xS, wYS, bYS, teamColor, panelIdx) {
     .attr('width', CONTENT_W).attr('height', BOWLER_H + PANEL_GAP + WORM_H)
     .attr('fill', 'none').attr('pointer-events', 'all')
     .on('mousemove', function(event) {
+      if (event.buttons !== 0) return;   // suppress hover during pan drag
       const [mx] = d3.pointer(event);
       const overVal = xS.invert(Math.max(0, mx));
       const bisect  = d3.bisector(d => d.x).left;
@@ -347,6 +349,69 @@ function setupHover(svg, root, inn, xS, wYS, bYS, teamColor, panelIdx) {
       crosshair.style('opacity', 0);
       ttEl.style.display = 'none';
     });
+}
+
+/* ── zoom / pan (viewBox-based) ───────────────────────────────────── */
+function setupZoom(svg) {
+  const W = +svg.attr('width');
+  const H = +svg.attr('height');
+  let vx = 0, vy = 0, vw = W, vh = H;
+
+  svg.attr('viewBox', `0 0 ${W} ${H}`).style('cursor', 'crosshair');
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  function applyViewBox() {
+    svg.attr('viewBox', `${vx} ${vy} ${vw} ${vh}`);
+  }
+
+  /* ── wheel to zoom ──────────────────────────────────────────────── */
+  svg.node().addEventListener('wheel', event => {
+    event.preventDefault();
+    const factor   = event.deltaY > 0 ? 1.15 : 1 / 1.15;
+    const rect     = svg.node().getBoundingClientRect();
+    // Mouse position in SVG content coordinates
+    const mx = (event.clientX - rect.left)  / rect.width  * vw + vx;
+    const my = (event.clientY - rect.top)   / rect.height * vh + vy;
+
+    const newVw = clamp(vw * factor, W / 30, W);
+    const newVh = clamp(vh * factor, H / 30, H);
+    vx = clamp(mx - (mx - vx) * newVw / vw, 0, W - newVw);
+    vy = clamp(my - (my - vy) * newVh / vh, 0, H - newVh);
+    vw = newVw;
+    vh = newVh;
+    applyViewBox();
+  }, { passive: false });
+
+  /* ── drag to pan ────────────────────────────────────────────────── */
+  let dragStart = null;
+
+  svg.on('mousedown.pan', event => {
+    if (event.button !== 0) return;
+    dragStart = { cx: event.clientX, cy: event.clientY, vx, vy, vw, vh };
+    svg.style('cursor', 'grabbing');
+  });
+
+  svg.on('mousemove.pan', event => {
+    if (!dragStart) return;
+    const rect = svg.node().getBoundingClientRect();
+    const dx   = (event.clientX - dragStart.cx) / rect.width  * dragStart.vw;
+    const dy   = (event.clientY - dragStart.cy) / rect.height * dragStart.vh;
+    vx = clamp(dragStart.vx - dx, 0, W - vw);
+    vy = clamp(dragStart.vy - dy, 0, H - vh);
+    applyViewBox();
+  });
+
+  svg.on('mouseup.pan mouseleave.pan', () => {
+    dragStart = null;
+    svg.style('cursor', 'crosshair');
+  });
+
+  /* double-click to reset */
+  svg.on('dblclick.zoom', () => {
+    vx = 0; vy = 0; vw = W; vh = H;
+    applyViewBox();
+  });
 }
 
 function renderTooltip(el, d, inn, teamColor, event) {
@@ -382,7 +447,16 @@ function renderTooltip(el, d, inn, teamColor, event) {
     <div class="tooltip-row">
       <span class="tooltip-label">Run rate</span>
       <span class="tooltip-val">${teamRR}</span>
-    </div>`;
+    </div>
+    ${inn.target != null ? (() => {
+      const req  = inn.target - d.y;
+      const remO = inn.maxOvers - d.x;
+      const rrr  = (req > 0 && remO > 0) ? (req / remO).toFixed(2) : req <= 0 ? 'WON' : '–';
+      return `<div class="tooltip-row" style="color:${WICKET_COL}">
+        <span class="tooltip-label">Required</span>
+        <span class="tooltip-val">${req > 0 ? req + ' runs  RRR ' + rrr : '✓ Won'}</span>
+      </div>`;
+    })() : ''}`;
 
   el.style.display = 'block';
   positionTooltip(el, event);

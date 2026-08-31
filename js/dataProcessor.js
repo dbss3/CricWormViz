@@ -31,38 +31,54 @@ export function processMatch(raw) {
 }
 
 /**
- * Attach target & requiredRunRate to any innings that is chasing a total.
+ * Attach `target`, `requiredRunRate`, and `targetLabel` to innings that are
+ * chasing a total (required runs positive).
  *
- * Standard Test order: A B A B
- *   target for innings[3] = innings[0].runs + innings[2].runs − innings[1].runs + 1
+ * Innings 2 — first-innings lead:
+ *   Team B needs innings[0].runs + 1 to take lead.
  *
- * Follow-on order: A B B A
- *   innings[0].team === innings[3].team → same formula still works because
- *   the team batting in indices 0+2 set the total, indices 1+3 are the other team.
+ * Innings 3 — erase deficit (only if the batting team trails):
+ *   Triggered when innings[1] team leads after innings 1+2.
  *
- * We detect which team set which totals from .team strings rather than
- * relying on index parity, so this handles follow-ons automatically.
+ * Innings 4 — match target:
+ *   target = setter's total across all innings − chaser's total so far + 1.
+ *   Works for both standard (A-B-A-B) and follow-on (A-B-B-A) order because
+ *   we group by team name rather than by index.
  */
 function computeTargets(innings) {
-  if (innings.length < 4) return;
+  const attach = (inn, target, label) => {
+    if (target < 1) return;
+    inn.target          = target;
+    inn.targetLabel     = label;
+    inn.requiredRunRate = inn.maxOvers > 0 ? target / inn.maxOvers : null;
+  };
 
-  // Find each team's cumulative runs across their two innings
-  const runs = {};
-  for (const inn of innings) {
-    runs[inn.team] = (runs[inn.team] ?? 0) + inn.maxRuns;
+  // ── Innings 2: first-innings lead ──────────────────────────────
+  if (innings.length >= 2) {
+    attach(innings[1], innings[0].maxRuns + 1, 'Lead target');
   }
 
-  // The chasing team is whichever team bats last
-  const chaserTeam  = innings[innings.length - 1].team;
-  const setterTeam  = innings.find(i => i.team !== chaserTeam)?.team;
-  if (!setterTeam) return;
+  // ── Innings 3: erase deficit (if behind after 2 innings) ───────
+  if (innings.length >= 3) {
+    const inn3 = innings[2];
+    // If same team as innings[0] (standard order): behind if inn2 > inn1
+    // If same team as innings[1] (follow-on):      behind if inn1 > inn2 and they follow on
+    const sameAsFirst = inn3.team === innings[0].team;
+    const deficit = sameAsFirst
+      ? innings[1].maxRuns - innings[0].maxRuns   // B's total − A's total
+      : innings[0].maxRuns - innings[1].maxRuns;  // follow-on: A − B
+    attach(inn3, deficit + 1, 'Deficit');
+  }
 
-  const target = runs[setterTeam] - runs[chaserTeam] + 1;
-
-  // Attach to the final innings
-  const chase = innings[innings.length - 1];
-  chase.target         = Math.max(target, 1);
-  chase.requiredRunRate = chase.maxOvers > 0 ? chase.target / chase.maxOvers : null;
+  // ── Innings 4: match target ────────────────────────────────────
+  if (innings.length >= 4) {
+    const chaserTeam = innings[innings.length - 1].team;
+    const setterTotal   = innings.filter(i => i.team !== chaserTeam)
+                                 .reduce((s, i) => s + i.maxRuns, 0);
+    const chaserPrevTotal = innings.slice(0, -1).filter(i => i.team === chaserTeam)
+                                   .reduce((s, i) => s + i.maxRuns, 0);
+    attach(innings[innings.length - 1], setterTotal - chaserPrevTotal + 1, 'Target');
+  }
 }
 
 function processInnings(inn, idx) {
