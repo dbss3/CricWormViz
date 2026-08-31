@@ -15,6 +15,8 @@
  */
 
 export function processMatch(raw) {
+  const innings = raw.innings.map(processInnings);
+  computeTargets(innings);
   return {
     matchInfo: {
       teams:     raw.info.teams,
@@ -24,8 +26,43 @@ export function processMatch(raw) {
       outcome:   raw.info.outcome,
       players:   raw.info.players,
     },
-    innings: raw.innings.map(processInnings),
+    innings,
   };
+}
+
+/**
+ * Attach target & requiredRunRate to any innings that is chasing a total.
+ *
+ * Standard Test order: A B A B
+ *   target for innings[3] = innings[0].runs + innings[2].runs − innings[1].runs + 1
+ *
+ * Follow-on order: A B B A
+ *   innings[0].team === innings[3].team → same formula still works because
+ *   the team batting in indices 0+2 set the total, indices 1+3 are the other team.
+ *
+ * We detect which team set which totals from .team strings rather than
+ * relying on index parity, so this handles follow-ons automatically.
+ */
+function computeTargets(innings) {
+  if (innings.length < 4) return;
+
+  // Find each team's cumulative runs across their two innings
+  const runs = {};
+  for (const inn of innings) {
+    runs[inn.team] = (runs[inn.team] ?? 0) + inn.maxRuns;
+  }
+
+  // The chasing team is whichever team bats last
+  const chaserTeam  = innings[innings.length - 1].team;
+  const setterTeam  = innings.find(i => i.team !== chaserTeam)?.team;
+  if (!setterTeam) return;
+
+  const target = runs[setterTeam] - runs[chaserTeam] + 1;
+
+  // Attach to the final innings
+  const chase = innings[innings.length - 1];
+  chase.target         = Math.max(target, 1);
+  chase.requiredRunRate = chase.maxOvers > 0 ? chase.target / chase.maxOvers : null;
 }
 
 function processInnings(inn, idx) {

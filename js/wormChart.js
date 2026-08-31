@@ -81,9 +81,10 @@ function renderPanel(el, inn, teamColor, panelIdx) {
     .domain([0, inn.maxBowlerRuns * 1.1])
     .range([0, BOWLER_H]);
 
-  /* main worm: 0 runs at bottom, maxRuns at top */
+  /* main worm: 0 runs at bottom; extend top to target if chasing */
+  const wormTop = Math.max(inn.maxRuns, inn.target ?? 0) * 1.08;
   const wYScale = d3.scaleLinear()
-    .domain([0, inn.maxRuns * 1.08])
+    .domain([0, wormTop])
     .range([WORM_H, 0]);
 
   const bowlerG = root.append('g').attr('class', 'bowler-panel');
@@ -164,6 +165,49 @@ function drawWormPanel(g, inn, xS, yS, teamColor) {
       .attr('x1', 0).attr('x2', CONTENT_W)
       .attr('y1', yS(t)).attr('y2', yS(t));
   });
+
+  /* ── target & required-rate lines ─────────────────────────────── */
+  if (inn.target != null) {
+    const tY = yS(inn.target);
+
+    /* required-rate diagonal — slope = target / maxOvers */
+    g.append('line').attr('class', 'req-rate-line')
+      .attr('x1', xS(0)).attr('y1', yS(0))
+      .attr('x2', xS(inn.maxOvers)).attr('y2', tY)
+      .attr('stroke', '#52514e')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '6 4')
+      .attr('opacity', 0.55);
+
+    /* target horizontal */
+    g.append('line').attr('class', 'target-line')
+      .attr('x1', xS(0)).attr('y1', tY)
+      .attr('x2', xS(inn.maxOvers)).attr('y2', tY)
+      .attr('stroke', WICKET_COL)
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '8 4')
+      .attr('opacity', 0.8);
+
+    /* target label */
+    g.append('text').attr('class', 'target-label')
+      .attr('x', xS(0) + 4)
+      .attr('y', tY - 5)
+      .attr('fill', WICKET_COL)
+      .attr('font-size', 10)
+      .attr('font-weight', 600)
+      .text(`Target: ${inn.target}`);
+
+    /* required run rate label */
+    if (inn.requiredRunRate != null) {
+      g.append('text').attr('class', 'target-label')
+        .attr('x', xS(inn.maxOvers / 2))
+        .attr('y', yS(inn.target / 2) + 12)
+        .attr('fill', '#52514e')
+        .attr('font-size', 10)
+        .attr('text-anchor', 'middle')
+        .text(`RRR ${inn.requiredRunRate.toFixed(2)}`);
+    }
+  }
 
   /* main worm */
   const line = d3.line().x(d => xS(d.x)).y(d => yS(d.y)).curve(d3.curveLinear);
