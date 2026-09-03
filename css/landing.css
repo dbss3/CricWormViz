@@ -1,0 +1,334 @@
+/* ============================================================
+   CricWormViz — Landing page styles
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0d0d0d;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+
+.lp-header {
+  background: #111110;
+  border-bottom: 1px solid #2c2c2a;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.lp-logo {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-logo-mark { color: #3987e5; font-size: 20px; }
+
+.lp-tagline {
+  font-size: 12px;
+  color: #555552;
+}
+
+/* ── Main ────────────────────────────────────────────────── */
+
+.lp-main {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+/* ── Source picker ───────────────────────────────────────── */
+
+.source-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.source-btn {
+  background: #1a1a19;
+  border: 1px solid #2c2c2a;
+  border-radius: 12px;
+  padding: 20px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  color: #ffffff;
+}
+
+.source-btn:hover {
+  border-color: #4a4a47;
+  background: #212120;
+  transform: translateY(-1px);
+}
+
+.source-btn.active {
+  border-color: #3987e5;
+  background: #121d2e;
+}
+
+.source-icon { font-size: 24px; margin-bottom: 4px; }
+
+.source-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.source-sub {
+  font-size: 11px;
+  color: #898781;
+}
+
+.source-btn.active .source-label { color: #3987e5; }
+
+/* ── Section heading ─────────────────────────────────────── */
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-heading > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #898781;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.sub-heading {
+  font-size: 11px;
+  font-weight: 600;
+  color: #555552;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 20px 0 10px;
+}
+
+.hidden { display: none !important; }
+
+/* ── Clicket section link ────────────────────────────────── */
+
+.clicket-link {
+  font-size: 12px;
+  color: #f97316;
+  text-decoration: none;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.clicket-link:hover { opacity: 1; }
+
+/* ── Refresh button ──────────────────────────────────────── */
+
+.refresh-btn {
+  background: none;
+  border: 1px solid #2c2c2a;
+  border-radius: 6px;
+  color: #898781;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 10px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.refresh-btn:hover { border-color: #4a4a47; color: #c3c2b7; }
+
+/* ── Match grid ──────────────────────────────────────────── */
+
+.match-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Match card ──────────────────────────────────────────── */
+
+.match-card {
+  background: #1a1a19;
+  border: 1px solid #2c2c2a;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow 0.18s, border-color 0.18s, transform 0.12s;
+  overflow: hidden;
+}
+
+.match-card:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  border-color: #3a3a37;
+  transform: translateY(-1px);
+}
+
+.match-card:hover .view-btn { opacity: 1; }
+
+.match-card.live { border-left: 3px solid #22c55e; }
+.match-card.clicket { border-left: 3px solid #f97316; }
+.match-card.clicket.live { border-left: 3px solid #22c55e; }
+
+/* ── Card league label ───────────────────────────────────── */
+
+.card-league {
+  font-size: 10px;
+  font-weight: 600;
+  color: #555552;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 8px;
+}
+
+.sim-badge { color: #f97316; }
+
+/* ── Card teams ──────────────────────────────────────────── */
+
+.card-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.card-team-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.card-team-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.card-team-score {
+  font-size: 13px;
+  font-weight: 500;
+  color: #c3c2b7;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Card footer ─────────────────────────────────────────── */
+
+.card-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-status {
+  font-size: 11px;
+  color: #898781;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-status.status-live { color: #22c55e; font-weight: 600; }
+
+.card-date {
+  font-size: 11px;
+  color: #555552;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Live dot ────────────────────────────────────────────── */
+
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  vertical-align: middle;
+  animation: pulse 1.4s ease-in-out infinite;
+  align-self: flex-start;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.4); opacity: 0.4; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ── View button ─────────────────────────────────────────── */
+
+.view-btn {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  background: #2a78d6;
+  border: none;
+  border-radius: 20px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  opacity: 0;
+  transition: opacity 0.18s, background 0.15s;
+}
+
+.view-btn:hover { background: #3384e0; }
+.view-btn.clicket-view { background: #c2580a; }
+.view-btn.clicket-view:hover { background: #d96510; }
+
+/* ── No ball-by-ball label ───────────────────────────────────── */
+
+.no-pbp-label {
+  font-size: 11px;
+  color: #ef4444;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* ── State messages ──────────────────────────────────────── */
+
+.loading-msg {
+  text-align: center;
+  color: #555552;
+  padding: 32px 16px;
+  font-size: 13px;
+}
+
+.error-msg {
+  color: #ef4444;
+  text-align: center;
+  padding: 24px 16px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.error-msg code {
+  background: #2c2c2a;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+}

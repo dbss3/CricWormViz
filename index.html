@@ -1,23 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cricket Worm Visualiser</title>
-  <link rel="stylesheet" href="css/style.css">
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <title>CricWormViz</title>
+  <link rel="stylesheet" href="css/landing.css">
 </head>
 <body>
-  <div id="app">
-    <header id="match-header">
-      <div class="header-inner">
-        <div id="match-title">Loading…</div>
-        <div id="match-meta"></div>
+  <header class="lp-header">
+    <div class="lp-logo">
+      <span class="lp-logo-mark">◉</span>
+      CricWormViz
+    </div>
+    <span class="lp-tagline">Ball-by-ball worm chart visualiser</span>
+  </header>
+
+  <main class="lp-main">
+
+    <!-- Source picker -->
+    <div class="source-picker">
+      <button class="source-btn active" id="btn-espn" onclick="showSource('espn')">
+        <span class="source-icon">🏏</span>
+        <span class="source-label">Cricket</span>
+        <span class="source-sub">Live &amp; recent via ESPN</span>
+      </button>
+      <button class="source-btn" id="btn-clicket" onclick="showSource('clicket')">
+        <span class="source-icon">🎮</span>
+        <span class="source-label">Clicket!</span>
+        <span class="source-sub">Simulated cricket league</span>
+      </button>
+    </div>
+
+    <!-- ESPN section -->
+    <div id="espn-section" class="source-section">
+      <div class="section-heading">
+        <span>Live &amp; Recent Matches</span>
+        <button class="refresh-btn" id="refresh-btn">↻ Refresh</button>
       </div>
-    </header>
-    <div id="chart-root"></div>
-  </div>
-  <div id="tooltip" class="tooltip" style="display:none"></div>
-  <script type="module" src="js/main.js"></script>
+      <div id="match-grid" class="match-grid">
+        <div class="loading-msg">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Clicket section -->
+    <div id="clicket-section" class="source-section hidden">
+      <div class="section-heading">
+        <span>Clicket! Matches</span>
+        <a class="clicket-link" href="https://clicket-game.com" target="_blank" rel="noopener">clicket-game.com ↗</a>
+      </div>
+      <div id="clicket-grid" class="match-grid">
+        <div class="loading-msg">Loading…</div>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="js/landing.js"></script>
 </body>
 </html>
