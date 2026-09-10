@@ -112,6 +112,45 @@ def ck_get(path):
 _cache_data = {}        # matchId → match dict
 _cache_time = 0.0       # unix timestamp of last fill
 
+# ── Active-league discovery (30-minute TTL) ───────────────────────────────────
+
+_league_ids_cache = set()
+_league_ids_time  = 0.0
+
+def discover_active_leagues():
+    """
+    Fetch all currently-active cricket league IDs from the ESPN scoreboard header.
+    Covers bilateral tours and ICC events that are not in the static list.
+    Cached for 30 minutes.
+    """
+    global _league_ids_cache, _league_ids_time
+    if time.time() - _league_ids_time < 1800 and _league_ids_cache:
+        return _league_ids_cache
+    try:
+        url = (
+            "https://site.web.api.espn.com/apis/v2/scoreboard/header"
+            "?sport=cricket&lang=en&region=gb&limit=200&showAirings=true"
+        )
+        req  = urllib.request.Request(url, headers=ESPN_HEADERS)
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            data = json.loads(r.read())
+        ids = set()
+        for sport in data.get("sports", []):
+            for league in sport.get("leagues", []):
+                lid = league.get("id")
+                if lid:
+                    try:
+                        ids.add(int(lid))
+                    except (ValueError, TypeError):
+                        pass
+        if ids:
+            _league_ids_cache = ids
+            _league_ids_time  = time.time()
+            return ids
+    except Exception:
+        pass
+    return set()
+
 
 def _score_str(competitor):
     """Build a display score from linescores (handles multi-innings and batting/fielding sides)."""
@@ -177,10 +216,10 @@ def live_matches():
     if time.time() - _cache_time < 300 and _cache_data:
         return sorted(_cache_data.values(), key=_match_sort_key)
 
-    today  = datetime.date.today()
-    dates  = [(today - datetime.timedelta(days=d)).strftime("%Y%m%d") for d in range(7)]
-    unique = list(dict.fromkeys(CRICKET_LEAGUES))
-    tasks  = [(lid, date) for lid in unique for date in dates]
+    today    = datetime.date.today()
+    dates    = [(today - datetime.timedelta(days=d)).strftime("%Y%m%d") for d in range(7)]
+    all_lids = list(set(CRICKET_LEAGUES) | discover_active_leagues())
+    tasks    = [(lid, date) for lid in all_lids for date in dates]
 
     new_cache = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
@@ -253,6 +292,42 @@ def has_pbp(league_id, event_id):
     return result
 
 
+def find_match(league_id, event_id):
+    """Locate a specific event by league+event ID, searching 30 days back."""
+    today = datetime.date.today()
+    for days_ago in range(30):
+        date = (today - datetime.timedelta(days=days_ago)).strftime("%Y%m%d")
+        try:
+            data = espn_get(f"/{league_id}/scoreboard", {"dates": date})
+        except Exception:
+            continue
+        lname = data.get("leagues", [{}])[0].get("name", "Cricket")
+        for evt in data.get("events", []):
+            if str(evt.get("id")) != str(event_id):
+                continue
+            comp  = evt.get("competitions", [{}])[0]
+            teams = comp.get("competitors", [])
+            home  = next((t for t in teams if t.get("homeAway") == "home"), teams[0] if teams else {})
+            away  = next((t for t in teams if t.get("homeAway") == "away"), teams[1] if len(teams) > 1 else {})
+            st    = evt.get("status", {}).get("type", {})
+            return {
+                "matchId":    f"{league_id}_{evt['id']}",
+                "leagueId":   int(league_id),
+                "eventId":    evt["id"],
+                "league":     lname,
+                "name":       evt.get("name", ""),
+                "date":       evt.get("date", ""),
+                "homeTeam":   home.get("team", {}).get("displayName", ""),
+                "awayTeam":   away.get("team", {}).get("displayName", ""),
+                "homeScore":  _score_str(home),
+                "awayScore":  _score_str(away),
+                "status":     st.get("state", ""),
+                "statusText": st.get("shortDetail", st.get("description", "")),
+                "isLive":     st.get("state") == "in",
+            }
+    return None
+
+
 def full_commentary(league_id, event_id):
     """Fetch all pages of ball-by-ball commentary, oldest first."""
     all_items = []
@@ -311,6 +386,14 @@ class Handler(SimpleHTTPRequestHandler):
         elif p.startswith("/espn/check-pbp/"):
             parts = p.split("/")        # ['','espn','check-pbp',lid,eid]
             self._json_route(lambda: {"hasPBP": has_pbp(parts[3], parts[4])})
+
+        elif p.startswith("/espn/find-match/"):
+            parts = p.split("/")        # ['','espn','find-match',lid,eid]
+            result = find_match(parts[3], parts[4])
+            if result is None:
+                self._err(404, "Match not found for those IDs")
+            else:
+                self._json_route(lambda: result)
 
         # ── Clicket routes ───────────────────────────────────
         elif p == "/clicket/live":

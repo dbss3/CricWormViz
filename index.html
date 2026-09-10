@@ -16,43 +16,13 @@
   </header>
 
   <main class="lp-main">
-
-    <!-- Source picker -->
-    <div class="source-picker">
-      <button class="source-btn active" id="btn-espn" onclick="showSource('espn')">
-        <span class="source-icon">🏏</span>
-        <span class="source-label">Cricket</span>
-        <span class="source-sub">Live &amp; recent via ESPN</span>
-      </button>
-      <button class="source-btn" id="btn-clicket" onclick="showSource('clicket')">
-        <span class="source-icon">🎮</span>
-        <span class="source-label">Clicket!</span>
-        <span class="source-sub">Simulated cricket league</span>
-      </button>
+    <div class="section-heading">
+      <span>Live &amp; Recent Matches</span>
+      <button class="refresh-btn" id="refresh-btn">↻ Refresh</button>
     </div>
-
-    <!-- ESPN section -->
-    <div id="espn-section" class="source-section">
-      <div class="section-heading">
-        <span>Live &amp; Recent Matches</span>
-        <button class="refresh-btn" id="refresh-btn">↻ Refresh</button>
-      </div>
-      <div id="match-grid" class="match-grid">
-        <div class="loading-msg">Loading…</div>
-      </div>
+    <div id="match-grid" class="match-grid">
+      <div class="loading-msg">Loading…</div>
     </div>
-
-    <!-- Clicket section -->
-    <div id="clicket-section" class="source-section hidden">
-      <div class="section-heading">
-        <span>Clicket! Matches</span>
-        <a class="clicket-link" href="https://clicket-game.com" target="_blank" rel="noopener">clicket-game.com ↗</a>
-      </div>
-      <div id="clicket-grid" class="match-grid">
-        <div class="loading-msg">Loading…</div>
-      </div>
-    </div>
-
   </main>
 
   <script type="module" src="js/landing.js"></script>
