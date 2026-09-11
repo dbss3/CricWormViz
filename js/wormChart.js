@@ -75,6 +75,28 @@ export function renderChart(rootEl, matchData) {
     resultEl.textContent = matchInfo.outcome;
   }
 
+  /* isTest: first innings lasted >50 overs, or there are already 3+ innings */
+  const isTest = innings.length > 2 || (innings[0]?.maxOvers ?? 0) > 50;
+
+  /* Test match day/overs-remaining display */
+  const dayInfoEl = document.getElementById('match-day-info');
+  if (dayInfoEl && isTest) {
+    /* total overs bowled across all innings (x resets each innings) */
+    const totalOvers = innings.reduce((sum, inn) => {
+      const last = inn.deliveries.at(-1);
+      return sum + (last ? last.x : 0);
+    }, 0);
+    const day         = Math.floor(totalOvers / 90) + 1;
+    const oversInDay  = totalOvers % 90;
+    const remaining   = Math.ceil(90 - oversInDay);   /* minimum, rounds up partial overs */
+
+    dayInfoEl.innerHTML = isLive
+      ? `<span class="day-badge">Day ${day}</span><span class="day-overs">${remaining} min overs remaining today</span>`
+      : `<span class="day-badge">Day ${day}</span>`;
+  } else if (dayInfoEl) {
+    dayInfoEl.innerHTML = '';
+  }
+
   /* scrollable flex column of innings panels */
   const scrollDiv = d3.select(rootEl).append('div').attr('class', 'innings-scroll');
 
@@ -86,8 +108,6 @@ export function renderChart(rootEl, matchData) {
     const prevIdx   = prevInn ? matchInfo.teams.indexOf(prevInn.team) : -1;
     const prevColor = prevInn ? TEAM_COLORS[prevIdx >= 0 ? prevIdx : (i - 1) % 2] : null;
 
-    /* isTest: first innings lasted >50 overs, or there are already 3+ innings */
-    const isTest    = innings.length > 2 || (innings[0]?.maxOvers ?? 0) > 50;
     const isLiveInn = isLive && i === innings.length - 1;
     const panelDiv = scrollDiv.append('div').attr('class', 'innings-panel').node();
     renderPanel(panelDiv, inn, teamColor, i, prevInn, prevColor, isLiveInn, isTest);
