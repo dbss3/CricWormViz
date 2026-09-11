@@ -81,14 +81,13 @@ export function renderChart(rootEl, matchData) {
   /* Test match day/overs-remaining display */
   const dayInfoEl = document.getElementById('match-day-info');
   if (dayInfoEl && isTest) {
-    /* total overs bowled across all innings (x resets each innings) */
-    const totalOvers = innings.reduce((sum, inn) => {
-      const last = inn.deliveries.at(-1);
-      return sum + (last ? last.x : 0);
-    }, 0);
-    const day         = Math.floor(totalOvers / 90) + 1;
-    const oversInDay  = totalOvers % 90;
-    const remaining   = Math.ceil(90 - oversInDay);   /* minimum, rounds up partial overs */
+    /* Only legal deliveries count toward the 90-over day (wides/no-balls excluded) */
+    const totalLegalBalls = innings.reduce((sum, inn) =>
+      sum + inn.deliveries.filter(d => d.isLegal).length, 0);
+    const completedOvers = Math.floor(totalLegalBalls / 6);
+    const day            = Math.floor(completedOvers / 90) + 1;
+    const oversInDay     = completedOvers % 90;
+    const remaining      = 90 - oversInDay;
 
     dayInfoEl.innerHTML = isLive
       ? `<span class="day-badge">Day ${day}</span><span class="day-overs">${remaining} min overs remaining today</span>`
