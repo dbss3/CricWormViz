@@ -86,9 +86,11 @@ export function renderChart(rootEl, matchData) {
     const prevIdx   = prevInn ? matchInfo.teams.indexOf(prevInn.team) : -1;
     const prevColor = prevInn ? TEAM_COLORS[prevIdx >= 0 ? prevIdx : (i - 1) % 2] : null;
 
+    /* isTest: first innings lasted >50 overs, or there are already 3+ innings */
+    const isTest    = innings.length > 2 || (innings[0]?.maxOvers ?? 0) > 50;
     const isLiveInn = isLive && i === innings.length - 1;
     const panelDiv = scrollDiv.append('div').attr('class', 'innings-panel').node();
-    renderPanel(panelDiv, inn, teamColor, i, prevInn, prevColor, isLiveInn);
+    renderPanel(panelDiv, inn, teamColor, i, prevInn, prevColor, isLiveInn, isTest);
   });
 }
 
@@ -99,10 +101,12 @@ function fmtOvers(x) {
 }
 
 /* ── single innings panel ─────────────────────────────────────────── */
-function renderPanel(el, inn, teamColor, panelIdx, prevInn = null, prevColor = null, isLiveInn = false) {
-  const score = inn.totalWickets >= 10 ? `${inn.maxRuns}` : `${inn.maxRuns}/${inn.totalWickets}`;
+function renderPanel(el, inn, teamColor, panelIdx, prevInn = null, prevColor = null, isLiveInn = false, isTest = false) {
+  const score   = inn.totalWickets >= 10 ? `${inn.maxRuns}` : `${inn.maxRuns}/${inn.totalWickets}`;
+  const lastDel = inn.deliveries.at(-1);
+  const overs   = lastDel ? fmtOvers(lastDel.x) : '';
   const liveTag = isLiveInn ? ' <span class="inn-live-badge">LIVE</span>' : '';
-  const label = `${ordinal(inn.idx + 1)} Innings – ${inn.team}  ${score}`;
+  const label   = `${ordinal(inn.idx + 1)} Innings – ${inn.team}  ${score}  (${overs})`;
   d3.select(el).append('div').attr('class', 'innings-title').html(esc(label) + liveTag);
 
   /* two-column layout: chart left, [current over middle for live,] scorecard right */
@@ -160,7 +164,7 @@ function renderPanel(el, inn, teamColor, panelIdx, prevInn = null, prevColor = n
   drawBatterPanel(batterG, inn, xScale, batYScale);
   drawWicketConnectors(root, inn, xScale, bYScale, wYScale, batYScale);
   drawAxes(root, inn, xScale, wYScale, bYScale, batYScale);
-  setupHover(svg, root, inn, xScale, wYScale, bYScale, batYScale, teamColor, panelIdx);
+  setupHover(svg, root, inn, xScale, wYScale, bYScale, batYScale, teamColor, panelIdx, isTest);
   setupZoom(svg);
 }
 
@@ -487,8 +491,12 @@ function renderCurrentOver(el, inn) {
       label = d.batRuns > 0 ? `nb+${d.batRuns}` : (d.extraRuns > 0 ? 'wd' : 'nb');
       cls = 'co-ball co-ball-extra';
     } else {
-      label = String(d.batRuns + (d.extraRuns ?? 0));
-      cls = 'co-ball' + (d.batRuns === 0 ? ' co-ball-dot' : d.batRuns >= 4 ? ' co-ball-boundary' : '');
+      const runs = d.batRuns + (d.extraRuns ?? 0);
+      label = runs === 0 ? '·' : String(runs);
+      cls = runs === 6 ? 'co-ball co-ball-six'
+          : runs === 4 ? 'co-ball co-ball-four'
+          : runs === 0 ? 'co-ball co-ball-dot'
+          : 'co-ball';
     }
     row.append('span').attr('class', cls).text(label);
   });
@@ -686,7 +694,7 @@ function drawAxes(root, inn, xS, wYS, bYS, batYS) {
 }
 
 /* ── hover / crosshair / tooltip ─────────────────────────────────── */
-function setupHover(svg, root, inn, xS, wYS, bYS, batYS, teamColor, panelIdx) {
+function setupHover(svg, root, inn, xS, wYS, bYS, batYS, teamColor, panelIdx, isTest = false) {
   const ttEl = document.getElementById('tooltip');
 
   /* vertical crosshair spanning all three panels */
@@ -708,7 +716,7 @@ function setupHover(svg, root, inn, xS, wYS, bYS, batYS, teamColor, panelIdx) {
 
       crosshair.attr('x1', xS(d.x)).attr('x2', xS(d.x)).style('opacity', 0.8);
 
-      renderTooltip(ttEl, d, inn, teamColor, event);
+      renderTooltip(ttEl, d, inn, teamColor, event, isTest);
     })
     .on('mouseleave', () => {
       crosshair.style('opacity', 0);
@@ -779,7 +787,7 @@ function setupZoom(svg) {
   });
 }
 
-function renderTooltip(el, d, inn, teamColor, event) {
+function renderTooltip(el, d, inn, teamColor, event, isTest = false) {
   const batter    = inn.batters[d.batter];
   const nonStrike = inn.batters[d.nonStriker];
   const bowler    = inn.bowlers[d.bowler];
@@ -796,7 +804,8 @@ function renderTooltip(el, d, inn, teamColor, event) {
   const requiredHtml = inn.target != null ? (() => {
     const req          = inn.target - d.y;
     const remO         = inn.maxOvers - d.x;
-    const isFinalChase = inn.targetLabel === 'Target';
+    /* Final chase = explicitly 'Target' (Test 4th inn), OR any target in a non-Test match */
+    const isFinalChase = inn.targetLabel === 'Target' || (!isTest && inn.target != null);
 
     if (req <= 0) {
       if (isFinalChase) {
