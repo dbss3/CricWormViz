@@ -794,12 +794,31 @@ function renderTooltip(el, d, inn, teamColor, event) {
   const bc  = SERIES[bowler?.colorIdx    % SERIES.length] ?? '#888';
 
   const requiredHtml = inn.target != null ? (() => {
-    const req  = inn.target - d.y;
-    const remO = inn.maxOvers - d.x;
-    const rrr  = (req > 0 && remO > 0) ? (req / remO).toFixed(2) : req <= 0 ? 'WON' : '–';
+    const req          = inn.target - d.y;
+    const remO         = inn.maxOvers - d.x;
+    const isFinalChase = inn.targetLabel === 'Target';
+
+    if (req <= 0) {
+      if (isFinalChase) {
+        return `<div class="tooltip-row" style="color:#22c55e;margin-top:2px">
+          <span class="tooltip-label">Required</span>
+          <span class="tooltip-val">&#10003; Won</span>
+        </div>`;
+      }
+      /* intermediate innings — show first-innings lead instead of 'won' */
+      const lead = 1 - req;   /* d.y − (target−1) = d.y − prevInningsTotal */
+      return `<div class="tooltip-row" style="color:#22c55e;margin-top:2px">
+        <span class="tooltip-label">Lead</span>
+        <span class="tooltip-val">+${lead}</span>
+      </div>`;
+    }
+
+    /* still chasing — show RRR only for limited-overs final chase */
+    const rrr      = (remO > 0 && isFinalChase) ? ` · RRR ${(req / remO).toFixed(2)}` : '';
+    const rowLabel = isFinalChase ? 'Required' : 'Deficit';
     return `<div class="tooltip-row" style="color:${WICKET_COL};margin-top:2px">
-      <span class="tooltip-label">Required</span>
-      <span class="tooltip-val">${req > 0 ? req + ' · RRR ' + rrr : '✓ Won'}</span>
+      <span class="tooltip-label">${rowLabel}</span>
+      <span class="tooltip-val">${req}${rrr}</span>
     </div>`;
   })() : '';
 
