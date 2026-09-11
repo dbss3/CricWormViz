@@ -26,6 +26,8 @@ const SERIES = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#22c55e','#90
 const WICKET_COL = '#e34948';
 const MUTED      = '#898781';
 const GRID_COL   = '#2c2c2a';
+const GOLD       = '#f0b429';
+const SILVER     = '#a8a8a0';
 
 /* One main colour per team slot (matches CSS --s1 / --s2) */
 const TEAM_COLORS = ['#3987e5', '#d95926'];
@@ -164,10 +166,6 @@ function renderPanel(el, inn, teamColor, panelIdx, prevInn = null, prevColor = n
 
 /* ── bowler panel ─────────────────────────────────────────────────── */
 function drawBowlerPanel(g, inn, xS, yS) {
-  g.append('text').attr('class', 'panel-label')
-    .attr('x', 3).attr('y', 11)
-    .text('Bowlers – runs conceded ↓');
-
   drawOverGridlines(g, xS, BOWLER_H);
 
   yS.ticks(4).forEach(t => {
@@ -193,11 +191,14 @@ function drawBowlerPanel(g, inn, xS, yS) {
         .attr('d', line);
     });
 
-    /* W markers sit ON the line */
+    /* W markers sit ON the line; gold fill for 5-wicket hauls */
+    const fifer = b.wickets >= 5;
     b.wicketMarkers.forEach(wm => {
       g.append('text').attr('class', 'w-label')
         .attr('x', xS(wm.x)).attr('y', yS(wm.runs) - 3)
-        .attr('text-anchor', 'middle').text('W');
+        .attr('text-anchor', 'middle')
+        .attr('fill', fifer ? GOLD : null)
+        .text('W');
     });
   });
 
@@ -281,7 +282,7 @@ function drawWormPanel(g, inn, xS, yS, teamColor, prevInn = null, prevColor = nu
       .attr('fill', 'none')
       .attr('stroke', prevColor ?? MUTED)
       .attr('stroke-width', 2.5)
-      .attr('opacity', 0.55)
+      .attr('opacity', 0.75)
       .attr('d', line);
   }
 
@@ -320,10 +321,6 @@ function drawWormPanel(g, inn, xS, yS, teamColor, prevInn = null, prevColor = nu
 
 /* ── batter panel (personal runs, separate subplot) ───────────────── */
 function drawBatterPanel(g, inn, xS, yS) {
-  g.append('text').attr('class', 'panel-label')
-    .attr('x', 3).attr('y', 11)
-    .text('Batters – personal runs');
-
   drawOverGridlines(g, xS, BATTER_H);
 
   yS.ticks(5).forEach(t => {
@@ -337,6 +334,29 @@ function drawBatterPanel(g, inn, xS, yS) {
     .attr('x1', 0).attr('x2', CONTENT_W)
     .attr('y1', yS(0)).attr('y2', yS(0))
     .attr('stroke', '#c3c2b7').attr('stroke-width', 1);
+
+  /* milestone lines: 50 (silver) and 100 (gold) */
+  const [domMin, domMax] = yS.domain();
+  if (domMax >= 50) {
+    g.append('line').attr('class', 'milestone-line')
+      .attr('x1', 0).attr('x2', CONTENT_W)
+      .attr('y1', yS(50)).attr('y2', yS(50))
+      .attr('stroke', SILVER).attr('stroke-width', 1).attr('stroke-dasharray', '5 4').attr('opacity', 0.7);
+    g.append('text').attr('class', 'milestone-label')
+      .attr('x', CONTENT_W + 2).attr('y', yS(50) + 3)
+      .attr('font-size', 8).attr('fill', SILVER).attr('opacity', 0.8)
+      .text('50');
+  }
+  if (domMax >= 100) {
+    g.append('line').attr('class', 'milestone-line')
+      .attr('x1', 0).attr('x2', CONTENT_W)
+      .attr('y1', yS(100)).attr('y2', yS(100))
+      .attr('stroke', GOLD).attr('stroke-width', 1).attr('stroke-dasharray', '5 4').attr('opacity', 0.7);
+    g.append('text').attr('class', 'milestone-label')
+      .attr('x', CONTENT_W + 2).attr('y', yS(100) + 3)
+      .attr('font-size', 8).attr('fill', GOLD).attr('opacity', 0.8)
+      .text('100');
+  }
 
   /* ── partnerships: colored band + top-centre label ─────────────── */
   const parts = inn._partnerships ?? computePartnerships(inn);
@@ -640,12 +660,29 @@ function drawAxes(root, inn, xS, wYS, bYS, batYS) {
     .attr('text-anchor', 'middle')
     .text('Overs');
 
+  /* Worm panel y-axis label */
   root.append('text').attr('class', 'axis-label')
     .attr('transform', 'rotate(-90)')
     .attr('x', -(WORM_TOP + WORM_H / 2))
     .attr('y', -46)
     .attr('text-anchor', 'middle')
     .text('Runs');
+
+  /* Bowler panel y-axis label */
+  root.append('text').attr('class', 'axis-label')
+    .attr('transform', 'rotate(-90)')
+    .attr('x', -(BOWLER_TOP + BOWLER_H / 2))
+    .attr('y', -46)
+    .attr('text-anchor', 'middle')
+    .text('Runs conceded');
+
+  /* Batter panel y-axis label */
+  root.append('text').attr('class', 'axis-label')
+    .attr('transform', 'rotate(-90)')
+    .attr('x', -(BATTER_TOP + BATTER_H / 2))
+    .attr('y', -46)
+    .attr('text-anchor', 'middle')
+    .text('Personal runs');
 }
 
 /* ── hover / crosshair / tooltip ─────────────────────────────────── */
