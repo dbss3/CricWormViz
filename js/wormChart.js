@@ -504,21 +504,31 @@ function renderCurrentOver(el, inn) {
 
   const row = d3el.append('div').attr('class', 'co-balls-row');
   overBalls.forEach(d => {
-    let label, cls;
+    const wrap = row.append('div').attr('class', 'co-ball-wrap');
+
     if (d.isWicket) {
-      label = 'W'; cls = 'co-ball co-ball-wkt';
+      wrap.append('span').attr('class', 'co-ball co-ball-wkt').text('W');
+      const dismissed = inn.wicketEvents.find(e => e.x === d.x)?.batterName ?? d.batter;
+      wrap.append('span').attr('class', 'co-ball-name').text(shortName(dismissed));
     } else if (!d.isLegal) {
-      label = d.batRuns > 0 ? `nb+${d.batRuns}` : (d.extraRuns > 0 ? 'wd' : 'nb');
-      cls = 'co-ball co-ball-extra';
+      const lbl = d.batRuns > 0 ? `nb+${d.batRuns}` : (d.extraRuns > 0 ? 'wd' : 'nb');
+      wrap.append('span').attr('class', 'co-ball co-ball-extra').text(lbl);
+      wrap.append('span').attr('class', 'co-ball-name').html('&nbsp;');
     } else {
-      const runs = d.batRuns + (d.extraRuns ?? 0);
-      label = runs === 0 ? '·' : String(runs);
-      cls = runs === 6 ? 'co-ball co-ball-six'
-          : runs === 4 ? 'co-ball co-ball-four'
-          : runs === 0 ? 'co-ball co-ball-dot'
-          : 'co-ball';
+      const totalRuns = d.batRuns + (d.extraRuns ?? 0);
+      const label     = totalRuns === 0 ? '·' : String(totalRuns);
+      const batter    = inn.batters[d.batter];
+      const color     = SERIES[(batter?.colorIdx ?? 0) % SERIES.length];
+      const isDot     = totalRuns === 0;
+      const ballEl = wrap.append('span')
+        .attr('class', 'co-ball')
+        .style('border-color', isDot ? null : color)
+        .style('background', isDot ? null : `${color}26`)   /* hex alpha ~15% */
+        .style('color', isDot ? null : color)
+        .text(label);
+      if (isDot) ballEl.classed('co-ball-dot', true);
+      wrap.append('span').attr('class', 'co-ball-name').text(shortName(d.batter));
     }
-    row.append('span').attr('class', cls).text(label);
   });
 
   /* over summary: bowler, runs, wickets */
