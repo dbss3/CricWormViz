@@ -61,42 +61,49 @@ export async function loadESPNMatch(matchId) {
   };
 }
 
-/* ── Fetch match info from today's scoreboard (falls back up to 14 days) ──── */
+/* ── Fetch match info from scoreboard (tries today first, then up to 13 more days) ── */
 
 async function getMatchInfo(leagueId, eventId) {
   const today = new Date();
-  const dates = Array.from({ length: 14 }, (_, d) => {
+  const todayStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+
+  /* Try today synchronously first — fastest path for live matches */
+  const fast = await fetchScoreboardInfo(leagueId, eventId, todayStr);
+  if (fast) return fast;
+
+  /* Parallel fallback: remaining 13 days */
+  const pastDates = Array.from({ length: 13 }, (_, d) => {
     const dt = new Date(today);
-    dt.setDate(today.getDate() - d);
+    dt.setDate(today.getDate() - (d + 1));
     return dt.toISOString().slice(0, 10).replace(/-/g, '');
   });
-
-  const results = await Promise.all(dates.map(async dateStr => {
-    try {
-      const data = await espnGet(`/${leagueId}/scoreboard?dates=${dateStr}`);
-      const lname = data.leagues?.[0]?.name ?? '';
-      for (const evt of data.events ?? []) {
-        if (String(evt.id) !== String(eventId)) continue;
-        const comp  = evt.competitions?.[0] ?? {};
-        const teams = comp.competitors ?? [];
-        const home  = teams.find(t => t.homeAway === 'home') ?? teams[0] ?? {};
-        const away  = teams.find(t => t.homeAway === 'away') ?? teams[1] ?? {};
-        const st    = evt.status?.type ?? {};
-        return {
-          homeTeam:   home.team?.displayName ?? home.displayName ?? '',
-          awayTeam:   away.team?.displayName ?? away.displayName ?? '',
-          homeId:     home.id ?? '',
-          isLive:     st.state === 'in',
-          statusText: st.shortDetail ?? st.description ?? '',
-          league:     lname,
-          venue:      comp.venue?.fullName ?? '',
-        };
-      }
-    } catch {}
-    return null;
-  }));
-
+  const results = await Promise.all(pastDates.map(ds => fetchScoreboardInfo(leagueId, eventId, ds)));
   return results.find(r => r != null) ?? null;
+}
+
+async function fetchScoreboardInfo(leagueId, eventId, dateStr) {
+  try {
+    const data  = await espnGet(`/${leagueId}/scoreboard?dates=${dateStr}`);
+    const lname = data.leagues?.[0]?.name ?? '';
+    for (const evt of data.events ?? []) {
+      if (String(evt.id) !== String(eventId)) continue;
+      const comp  = evt.competitions?.[0] ?? {};
+      const teams = comp.competitors ?? [];
+      const home  = teams.find(t => t.homeAway === 'home') ?? teams[0] ?? {};
+      const away  = teams.find(t => t.homeAway === 'away') ?? teams[1] ?? {};
+      const st    = evt.status?.type ?? {};
+      return {
+        homeTeam:   home.team?.displayName ?? home.displayName ?? '',
+        awayTeam:   away.team?.displayName ?? away.displayName ?? '',
+        homeId:     home.id ?? '',
+        isLive:     st.state === 'in',
+        statusText: st.shortDetail ?? st.description ?? '',
+        league:     lname,
+        venue:      comp.venue?.fullName ?? '',
+      };
+    }
+  } catch {}
+  return null;
 }
 
 /* ── Innings parsing ───────────────────────────────────────────────────────── */

@@ -49,7 +49,7 @@ const BATTER_TOP  = PANEL_H * 2 + PANEL_GAP * 2;
 
 /* ── entry point ──────────────────────────────────────────────────── */
 export function renderChart(rootEl, matchData) {
-  const { matchInfo, innings } = matchData;
+  const { matchInfo, innings, isLive } = matchData;
 
   /* header */
   document.getElementById('match-title').textContent =
@@ -84,8 +84,9 @@ export function renderChart(rootEl, matchData) {
     const prevIdx   = prevInn ? matchInfo.teams.indexOf(prevInn.team) : -1;
     const prevColor = prevInn ? TEAM_COLORS[prevIdx >= 0 ? prevIdx : (i - 1) % 2] : null;
 
+    const isLiveInn = isLive && i === innings.length - 1;
     const panelDiv = scrollDiv.append('div').attr('class', 'innings-panel').node();
-    renderPanel(panelDiv, inn, teamColor, i, prevInn, prevColor);
+    renderPanel(panelDiv, inn, teamColor, i, prevInn, prevColor, isLiveInn);
   });
 }
 
@@ -96,14 +97,18 @@ function fmtOvers(x) {
 }
 
 /* ── single innings panel ─────────────────────────────────────────── */
-function renderPanel(el, inn, teamColor, panelIdx, prevInn = null, prevColor = null) {
+function renderPanel(el, inn, teamColor, panelIdx, prevInn = null, prevColor = null, isLiveInn = false) {
   const score = inn.totalWickets >= 10 ? `${inn.maxRuns}` : `${inn.maxRuns}/${inn.totalWickets}`;
+  const liveTag = isLiveInn ? ' <span class="inn-live-badge">LIVE</span>' : '';
   const label = `${ordinal(inn.idx + 1)} Innings – ${inn.team}  ${score}`;
-  d3.select(el).append('div').attr('class', 'innings-title').text(label);
+  d3.select(el).append('div').attr('class', 'innings-title').html(esc(label) + liveTag);
 
-  /* two-column layout: chart left, scorecard right */
+  /* two-column layout: chart left, [current over middle for live,] scorecard right */
   const row = d3.select(el).append('div').attr('class', 'innings-row');
   const chartCol = row.append('div').attr('class', 'innings-chart-col');
+  if (isLiveInn) {
+    renderCurrentOver(row.append('div').attr('class', 'current-over-col').node(), inn);
+  }
   renderScorecard(row.append('div').attr('class', 'innings-scorecard-col').node(), inn, teamColor);
 
   const svg = chartCol
@@ -275,8 +280,8 @@ function drawWormPanel(g, inn, xS, yS, teamColor, prevInn = null, prevColor = nu
     g.append('path').datum(prevInn.deliveries)
       .attr('fill', 'none')
       .attr('stroke', prevColor ?? MUTED)
-      .attr('stroke-width', 1.5)
-      .attr('opacity', 0.28)
+      .attr('stroke-width', 2.5)
+      .attr('opacity', 0.55)
       .attr('d', line);
   }
 
@@ -441,6 +446,41 @@ function drawBatterPanel(g, inn, xS, yS) {
  * Pair key is sorted names so end-swaps don't create new partnerships.
  * Returns batter names (to drive colors) and per-delivery cumulative pts.
  */
+/* ── current over panel (live matches) ───────────────────────────── */
+function renderCurrentOver(el, inn) {
+  if (!inn.deliveries.length) return;
+  const lastDel  = inn.deliveries.at(-1);
+  const curOver  = Math.floor(lastDel.x);
+  const overBalls = inn.deliveries.filter(d => Math.floor(d.x) === curOver);
+  if (!overBalls.length) return;
+
+  const d3el = d3.select(el);
+  d3el.append('div').attr('class', 'co-heading')
+    .text(`Over ${curOver + 1}`);
+
+  const row = d3el.append('div').attr('class', 'co-balls-row');
+  overBalls.forEach(d => {
+    let label, cls;
+    if (d.isWicket) {
+      label = 'W'; cls = 'co-ball co-ball-wkt';
+    } else if (!d.isLegal) {
+      label = d.batRuns > 0 ? `nb+${d.batRuns}` : (d.extraRuns > 0 ? 'wd' : 'nb');
+      cls = 'co-ball co-ball-extra';
+    } else {
+      label = String(d.batRuns + (d.extraRuns ?? 0));
+      cls = 'co-ball' + (d.batRuns === 0 ? ' co-ball-dot' : d.batRuns >= 4 ? ' co-ball-boundary' : '');
+    }
+    row.append('span').attr('class', cls).text(label);
+  });
+
+  /* over summary: bowler, runs, wickets */
+  const overRuns    = overBalls.reduce((s, d) => s + (d.batRuns ?? 0) + (d.extraRuns ?? 0), 0);
+  const overWkts    = overBalls.filter(d => d.isWicket).length;
+  const bowlerName  = overBalls[0]?.bowler ?? '';
+  d3el.append('div').attr('class', 'co-summary')
+    .text(`${shortName(bowlerName)}  ${overRuns} run${overRuns !== 1 ? 's' : ''}${overWkts ? `, ${overWkts}W` : ''}`);
+}
+
 /* ── innings scorecard ────────────────────────────────────────────── */
 function renderScorecard(el, inn, teamColor) {
   const d3el = d3.select(el);
@@ -480,8 +520,10 @@ function renderScorecard(el, inn, teamColor) {
   const lastDel = inn.deliveries.at(-1);
   const totalOv = lastDel ? fmtOvers(lastDel.x) : '–';
   const totalScore = inn.totalWickets >= 10 ? `${inn.maxRuns}` : `${inn.maxRuns}/${inn.totalWickets}`;
+  const totalLegalBalls = inn.deliveries.filter(d => d.isLegal).length;
+  const totalSR = totalLegalBalls > 0 ? (inn.maxRuns / totalLegalBalls * 100).toFixed(0) : '–';
   batBody.append('tr').attr('class', 'sc-total')
-    .html(`<td colspan="2"><strong>Total: ${totalScore}</strong></td><td colspan="3" class="sc-dim">${totalOv}</td>`);
+    .html(`<td colspan="2"><strong>Total: ${totalScore}</strong></td><td class="sc-dim">${totalOv}</td><td class="sc-dim">SR ${totalSR}</td><td></td>`);
 
   /* ── bowling ── */
   d3el.append('div').attr('class', 'sc-heading sc-heading-bowl').text('Bowling');

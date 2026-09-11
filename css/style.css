@@ -297,3 +297,78 @@ body {
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-extras td, .sc-total td { color: var(--text-muted); font-size: 10px; }
 .sc-total td { font-weight: 700; color: var(--text-secondary); font-size: 11px; border-top: 1px solid var(--baseline); }
+
+/* ── live badge on innings title ── */
+.inn-live-badge {
+  display: inline-block;
+  background: var(--wicket);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ── current over panel (live) ── */
+.current-over-col {
+  flex: 0 0 auto;
+  width: 120px;
+  padding: 10px 10px;
+  border-left: 1px solid var(--grid);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.co-heading {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.co-balls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.co-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-page);
+  border: 1.5px solid var(--baseline);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.co-ball-dot {
+  color: var(--text-muted);
+  border-color: var(--grid);
+}
+.co-ball-boundary {
+  background: rgba(57,135,229,0.15);
+  border-color: var(--s1);
+  color: var(--s1);
+}
+.co-ball-wkt {
+  background: rgba(227,73,72,0.15);
+  border-color: var(--wicket);
+  color: var(--wicket);
+}
+.co-ball-extra {
+  background: rgba(137,135,129,0.12);
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+  font-size: 9px;
+}
+.co-summary {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
