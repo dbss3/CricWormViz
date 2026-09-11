@@ -107,9 +107,7 @@ export function renderChart(rootEl, matchData) {
     const day       = apiDay ?? calcDay;
     const remaining = apiRem ?? calcRem;
 
-    dayInfoEl.innerHTML = isLive
-      ? `<span class="day-badge">Day ${day}</span><span class="day-overs">${remaining} min overs remaining today</span>`
-      : `<span class="day-badge">Day ${day}</span>`;
+    dayInfoEl.innerHTML = `<span class="day-badge">Day ${day}</span>`;
   } else if (dayInfoEl) {
     dayInfoEl.innerHTML = '';
   }
