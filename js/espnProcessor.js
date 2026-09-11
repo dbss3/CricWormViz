@@ -55,8 +55,9 @@ export async function loadESPNMatch(matchId) {
       dates:     [],
       outcome:   info?.statusText ?? '',
     },
-    innings: inningsData,
-    isLive:  info?.isLive ?? false,
+    innings:     inningsData,
+    isLive:      info?.isLive ?? false,
+    testDayInfo: info?.testDayInfo ?? { day: null, oversRemaining: null },
     matchId,
   };
 }
@@ -87,23 +88,67 @@ async function fetchScoreboardInfo(leagueId, eventId, dateStr) {
     const lname = data.leagues?.[0]?.name ?? '';
     for (const evt of data.events ?? []) {
       if (String(evt.id) !== String(eventId)) continue;
-      const comp  = evt.competitions?.[0] ?? {};
-      const teams = comp.competitors ?? [];
-      const home  = teams.find(t => t.homeAway === 'home') ?? teams[0] ?? {};
-      const away  = teams.find(t => t.homeAway === 'away') ?? teams[1] ?? {};
-      const st    = evt.status?.type ?? {};
+      const comp      = evt.competitions?.[0] ?? {};
+      const teams     = comp.competitors ?? [];
+      const home      = teams.find(t => t.homeAway === 'home') ?? teams[0] ?? {};
+      const away      = teams.find(t => t.homeAway === 'away') ?? teams[1] ?? {};
+      const st        = evt.status?.type ?? {};
+      const situation = comp.situation ?? {};
+
+      /* Gather every candidate field that might tell us day/overs remaining */
+      const statusShort = st.shortDetail ?? '';
+      const statusDesc  = st.description ?? '';
+      const displayClock = evt.status?.displayClock ?? '';
+      const periodNum    = evt.status?.period ?? null;
+
+      /* structured overs-remaining from situation object (field names vary by API version) */
+      const structuredOvRem = situation.oversRemaining
+        ?? situation.overRemaining
+        ?? situation.remainingOvers
+        ?? null;
+
+      const testDayInfo = parseTestDayInfo(
+        statusShort, statusDesc, displayClock, periodNum, structuredOvRem
+      );
+
       return {
         homeTeam:   home.team?.displayName ?? home.displayName ?? '',
         awayTeam:   away.team?.displayName ?? away.displayName ?? '',
         homeId:     home.id ?? '',
         isLive:     st.state === 'in',
-        statusText: st.shortDetail ?? st.description ?? '',
+        statusText: statusShort || statusDesc,
         league:     lname,
         venue:      comp.venue?.fullName ?? '',
+        testDayInfo,
       };
     }
   } catch {}
   return null;
+}
+
+/**
+ * Extract day number and minimum overs remaining from whatever ESPN gives us.
+ * Returns { day: number|null, oversRemaining: number|null }.
+ */
+function parseTestDayInfo(shortDetail, description, displayClock, periodNum, structuredOvRem) {
+  const texts = [shortDetail, description, displayClock].filter(Boolean).join(' ');
+
+  /* Day number — ESPN uses "Day N" in shortDetail for Tests */
+  const dayMatch = texts.match(/[Dd]ay\s+(\d+)/);
+  const day = dayMatch ? parseInt(dayMatch[1], 10) : null;
+
+  /* Overs remaining — try structured field first, then parse text */
+  let oversRemaining = null;
+  if (structuredOvRem != null) {
+    oversRemaining = Math.round(structuredOvRem);
+  } else {
+    /* Patterns: "34 ov rem", "34 min ov rem", "34 overs rem", "34 overs remaining" */
+    const ovRemMatch = texts.match(/(\d+(?:\.\d+)?)\s*(?:min\s+)?ov(?:ers?)?\s+rem/i)
+      ?? texts.match(/(\d+)\s+overs?\s+remaining/i);
+    if (ovRemMatch) oversRemaining = Math.round(parseFloat(ovRemMatch[1]));
+  }
+
+  return { day, oversRemaining };
 }
 
 /* ── Innings parsing ───────────────────────────────────────────────────────── */

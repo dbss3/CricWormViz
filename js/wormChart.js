@@ -64,7 +64,7 @@ const BATTER_TOP  = PANEL_H * 2 + PANEL_GAP * 2;
 
 /* ── entry point ──────────────────────────────────────────────────── */
 export function renderChart(rootEl, matchData) {
-  const { matchInfo, innings, isLive } = matchData;
+  const { matchInfo, innings, isLive, testDayInfo } = matchData;
 
   /* header */
   document.getElementById('match-title').textContent =
@@ -94,13 +94,18 @@ export function renderChart(rootEl, matchData) {
   /* Test match day/overs-remaining display */
   const dayInfoEl = document.getElementById('match-day-info');
   if (dayInfoEl && isTest) {
-    /* Only legal deliveries count toward the 90-over day (wides/no-balls excluded) */
+    /* Prefer values parsed from ESPN; fall back to legal-balls calculation */
+    const apiDay = testDayInfo?.day ?? null;
+    const apiRem = testDayInfo?.oversRemaining ?? null;
+
     const totalLegalBalls = innings.reduce((sum, inn) =>
       sum + inn.deliveries.filter(d => d.isLegal).length, 0);
     const completedOvers = Math.floor(totalLegalBalls / 6);
-    const day            = Math.floor(completedOvers / 90) + 1;
-    const oversInDay     = completedOvers % 90;
-    const remaining      = 90 - oversInDay;
+    const calcDay        = Math.floor(completedOvers / 90) + 1;
+    const calcRem        = 90 - (completedOvers % 90);
+
+    const day       = apiDay ?? calcDay;
+    const remaining = apiRem ?? calcRem;
 
     dayInfoEl.innerHTML = isLive
       ? `<span class="day-badge">Day ${day}</span><span class="day-overs">${remaining} min overs remaining today</span>`
@@ -601,7 +606,7 @@ function renderScorecard(el, inn, teamColor) {
   d3el.append('div').attr('class', 'sc-heading sc-heading-bowl').text('Bowling');
   const bowlTable = d3el.append('table').attr('class', 'sc-table');
   bowlTable.append('thead').append('tr').html(
-    '<th>Bowler</th><th>O</th><th>R</th><th>W</th><th>ER</th>'
+    '<th>Bowler</th><th>O</th><th>R</th><th>W</th><th>Econ</th>'
   );
   const bowlBody = bowlTable.append('tbody');
 
