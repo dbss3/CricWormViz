@@ -22,7 +22,20 @@
  */
 
 /* ── palette — dark mode (matches CSS :root custom properties) ────── */
-const SERIES = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#22c55e','#9085e9','#e66767'];
+/* 11 perceptually distinct colours — enough for a full batting lineup */
+const SERIES = [
+  '#3987e5', /* blue        */
+  '#d95926', /* red-orange  */
+  '#199e70', /* teal-green  */
+  '#c98500', /* amber       */
+  '#d55181', /* rose        */
+  '#22c55e', /* lime-green  */
+  '#9085e9', /* purple      */
+  '#e66767', /* salmon      */
+  '#06b6d4', /* cyan        */
+  '#f97316', /* orange      */
+  '#a3e635', /* yellow-lime */
+];
 const WICKET_COL = '#e34948';
 const MUTED      = '#898781';
 const GRID_COL   = '#2c2c2a';
@@ -99,8 +112,10 @@ export function renderChart(rootEl, matchData) {
   /* scrollable flex column of innings panels */
   const scrollDiv = d3.select(rootEl).append('div').attr('class', 'innings-scroll');
 
-  innings.forEach((inn, i) => {
-    const teamIdx   = matchInfo.teams.indexOf(inn.team);
+  /* Most recent innings first */
+  innings.slice().reverse().forEach((inn, revI) => {
+    const i       = inn.idx;   /* original chronological index */
+    const teamIdx = matchInfo.teams.indexOf(inn.team);
     const teamColor = TEAM_COLORS[teamIdx >= 0 ? teamIdx : i % 2];
 
     const prevInn   = i > 0 ? innings[i - 1] : null;
@@ -109,7 +124,7 @@ export function renderChart(rootEl, matchData) {
 
     const isLiveInn = isLive && i === innings.length - 1;
     const panelDiv = scrollDiv.append('div').attr('class', 'innings-panel').node();
-    renderPanel(panelDiv, inn, teamColor, i, prevInn, prevColor, isLiveInn, isTest);
+    renderPanel(panelDiv, inn, teamColor, revI, prevInn, prevColor, isLiveInn, isTest);
   });
 }
 

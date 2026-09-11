@@ -408,3 +408,43 @@ body {
   color: var(--text-muted);
   line-height: 1.4;
 }
+
+/* ── responsive: mobile (≤720px) ─────────────────────────────────── */
+@media (max-width: 720px) {
+  #chart-root { padding: 8px; }
+
+  .innings-scroll { gap: 12px; }
+
+  /* Stack chart columns vertically; reorder so ball-by-ball leads */
+  .innings-row {
+    flex-direction: column;
+  }
+  .current-over-col {
+    order: 1;
+    width: 100%;
+    border-left: none;
+    border-bottom: 1px solid var(--grid);
+  }
+  .innings-chart-col {
+    order: 2;
+  }
+  .innings-scorecard-col {
+    order: 3;
+    width: 100%;
+    max-width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--grid);
+  }
+
+  /* Scale SVG to viewport width while preserving aspect ratio */
+  .innings-svg {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Allow balls to wrap on very narrow screens */
+  .co-balls-row { flex-wrap: wrap; }
+
+  /* Widen current-over panel to full width */
+  .current-over-col { max-width: 100%; }
+}
